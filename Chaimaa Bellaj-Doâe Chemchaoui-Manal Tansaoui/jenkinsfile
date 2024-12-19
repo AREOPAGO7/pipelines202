@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    environment {
+        GIT_CREDENTIALS = 'github-token'
+        SONARQUBE_CREDENTIALS = 'sonarqube-token'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                echo 'Fetching code from the GitHub repository...'
+                git branch: 'main', credentialsId: "${GIT_CREDENTIALS}", url: 'https://github.com/doaechemchaoui/TPJenkins.git'
+            }
+        }
+
+        stage('Install Packages') {
+            steps {
+                echo 'Installing required packages...'
+                bat 'npm install'
+            }
+        }
+
+        stage('Execute Tests') {
+            steps {
+                echo 'Running unit tests...'
+                bat 'npm test'
+            }
+        }
+
+        stage('Static Code Analysis') {
+            steps {
+                echo 'Running static analysis with SonarQube...'
+                withCredentials([string(credentialsId: "${SONARQUBE_CREDENTIALS}", variable: 'SONAR_TOKEN')]) {
+                    bat 'sonar-scanner.bat -D"sonar.projectKey=TPJenkinsKey" -D"sonar.sources=." -D"sonar.host.url=http://localhost:9000" -D"sonar.token=${SONAR_TOKEN}"'
+                }
+            }
+        }
+
+        stage('Prepare Deployment') {
+            steps {
+                echo 'Preparing the deployment directory...'
+                bat 'if not exist ..\\AppDeployment\\TPJenkins mkdir ..\\AppDeployment\\TPJenkins'
+                bat 'xcopy /E /I * ..\\AppDeployment\\TPJenkins\\'
+            }
+        }
+
+        stage('Launch Application') {
+            steps {
+                echo 'Launching the application...'
+                bat 'node ../AppDeployment/TPJenkins/app.js'
+            }
+        }
+    }
+}

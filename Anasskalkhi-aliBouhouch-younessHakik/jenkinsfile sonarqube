@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+
+    
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git branch: 'master', url: 'https://github.com/devopsanass/devops.git'  // Clone your repository
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                bat 'npm ci'  // Install dependencies using npm on Windows
+            }
+        }
+
+        stage('Run Unit Tests') {
+            steps {
+                bat 'npm test'  // Run unit tests using npm on Windows
+            }
+        }
+
+        stage('Run SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    bat """
+                    sonar-scanner ^
+                        -Dsonar.projectKey=devops ^
+                        -Dsonar.sources=src ^
+                        -Dsonar.host.url=http://localhost:9000 ^
+                        -Dsonar.login=sqp_d204145f061718055e5c36db128c56be00d43f10
+                    """
+                }
+            }
+        }
+
+        // Add this stage to trigger another job
+        stage('Trigger Another Job') {
+            steps {
+                script {
+                    // Ensure that 'deploys3' is the correct job name in Jenkins
+                    build job: 'deploys3'
+                }
+            }
+        }
+    }
+}

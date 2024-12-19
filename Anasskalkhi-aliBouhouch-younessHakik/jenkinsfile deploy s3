@@ -1,0 +1,46 @@
+pipeline {
+    agent any
+    tools {
+        nodejs 'nodejs'  // Ensure 'nodejs' is properly configured in Jenkins tools
+    }
+
+    environment {
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key')  // Access Key ID (from "Username and Password" credentials)
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')  // Secret Access Key (from "Secret text" credentials)
+    }
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git url: "https://github.com/devopsanass/devops/", branch: "master"
+            }
+        }
+
+        stage('NPM Install') {
+            steps {
+                bat "npm install"
+            }
+        }
+
+        stage('Node Build') {
+            steps {
+                bat "npm run build"
+            }
+        }
+
+        stage('S3 Deploy') {
+            steps {
+                bat "aws s3 sync dist/ s3://s3-react-3 --delete"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully"
+        }
+        failure {
+            echo "Pipeline failed"
+        }
+    }
+}
